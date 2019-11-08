@@ -22,3 +22,17 @@ Linux:
 
 [smb://ntnas1/rdshare/RD%20All/CompactCore(vIMS)](smb://ntnas1/rdshare/RD%20All/CompactCore(vIMS))
 
+### Resources
+
+Since **ansible** will be used for a lot of the automatisation, here are some resources for it:
+
+https://www.ansible.com/
+
+Docs:
+
+https://docs.ansible.com/
+
+Module index:
+
+https://docs.ansible.com/ansible/latest/modules/modules_by_category.html
+
