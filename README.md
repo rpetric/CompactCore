@@ -16,7 +16,7 @@ Additional documentation can be found on following links:
 
 Windows:
 
-[\\\\ntnas1\RDShare\RD All\CompactCore(vIMS)](\\\\ntnas1\RDShare\RD All\CompactCore(vIMS))
+[\\\\ntnas1\RDShare\RD All\CompactCore(vIMS)](\\ntnas1\RDShare\RD All\CompactCore%28vIMS%29)
 
 Linux:
 
