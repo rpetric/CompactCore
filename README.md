@@ -5,6 +5,7 @@ Main purpose is to provide issue list and board.
 Scripts and ansible playbooks will also be committed here.
 
 ###Issues
+
 [List](https://vmgitent.iskratel.si/compactcore/step-1/issues)
 
 [Board](https://vmgitent.iskratel.si/compactcore/step-1/-/boards)
@@ -15,7 +16,7 @@ Additional documentation can be found on following links:
 
 Windows:
 
-[\\\ntnas1\RDShare\RD All\CompactCore(vIMS)](\\\ntnas1\RDShare\RD All\CompactCore(vIMS)\))
+[\\\ntnas1\RDShare\RD All\CompactCore(vIMS)](\\\ntnas1\RDShare\RD All\CompactCore(vIMS))
 
 Linux:
 
