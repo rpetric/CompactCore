@@ -1,0 +1,26 @@
+---
+- name: Authenticate
+  uri:
+    url: http://{{ ob }}:8082/auth/realms/iskratel/protocol/openid-connect/token
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: password
+      client_id: "{{ client }}"
+      username: "{{ user }}"
+      password: "{{ passw }}"
+  register: token
+- name: Output token
+  debug:
+    var: token['json']['access_token']
+  when: output
+- name: Get project ID
+  uri:
+    url: http://{{ ob }}:8080/api/v1/projects
+    headers:
+      Authorization: Bearer {{ token['json']['access_token'] }}
+  register: project_id
+- name: Output project id
+  debug:
+    var: project_id['json'][0]['id']
+  when: output

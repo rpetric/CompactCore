@@ -1,0 +1,44 @@
+---
+- name: Cleanup everithing
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+  roles:
+    - common
+  vars:
+    vim: icp
+
+  tasks:
+
+# Check VIMs
+    - name: List VIMs
+      uri:
+        url: http://{{ ob }}:8080/api/v1/datacenters
+        headers:
+          Authorization: Bearer {{ token['json']['access_token'] }}
+          project-id: "{{ project_id['json'][0]['id'] }}"
+      register: datacenters
+#    - name: Store datacenters to file
+#      copy:
+#        content: "{{ datacenters.json|map(attribute='name')|list }}"
+#        dest: datacenters.output
+#    - name: For test
+#      copy:
+#        content: "{{ datacenters.json }}"
+#        dest: datacenters.raw
+    - name: Output existing VIM names
+      debug:
+        var: datacenters.json|map(attribute='name')|list
+      when: output
+    - name: VIM not existing
+      debug:
+        var: "Vim named {{ vim }} does not exist
+      when: datacenters.json|selectattr('name', 'equalto', vim1)|list|length==0
+    - name: Delete vim if exists
+      uri:
+        uri:
+      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length>0
+
+
+
+

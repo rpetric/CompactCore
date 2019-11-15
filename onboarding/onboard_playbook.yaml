@@ -1,0 +1,74 @@
+---
+- name: Onboard excel
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+  roles:
+    - common
+  vars:
+    vim: icp
+
+  tasks:
+
+# Get CSP tools location
+    - name: Get CSP tools
+      uri:
+        url: http://{{ ob }}:8080/api/v1/excel/csptoolspath
+        headers:
+          Authorization: Bearer {{ token['json']['access_token'] }}
+          project-id: "{{ project_id['json'][0]['id'] }}"
+      register: csp_tools_path
+    - name: Output CSP Tools path
+      debug:
+        var: csp_tools_path['json']
+      when: output
+
+# Excel upload
+    - name: Validate excel (usin Curl)
+      shell: |
+        curl -s -o curl.output -w "%{http_code}" -X POST \
+        -H "Authorization:Bearer {{ token['json']['access_token'] }}" \
+        -H "project-id:{{ project_id['json'][0]['id'] }}" \
+        -H "Content-Type:multipart/form-data" \
+        -H "cspToolPath:{{ csp_tools_path['json'] }}" \
+        -H "vim-url:/api/v1/excel/validate" \
+        -H "userName:{{ user }}" \
+        -F "file=@\"test.xlsx\";type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;filename=\"test.xlsx\"" \
+        "http://{{ ob }}:8080/api/v1/excel/validate"
+      args:
+        warn: no
+      register: validation_response
+    - name: Fail on error
+      fail:
+        msg: "Excel upload NOT successful!\n\n{{ validation_response }}"
+      when: validation_response['stdout'] != "200"
+    - name: Select for onboard
+      uri:
+        url: http://{{ ob }}:8080/api/v1/excel/selectForOnboard
+        headers:
+          Authorization: Bearer {{ token['json']['access_token'] }}
+          project-id: "{{ project_id['json'][0]['id'] }}"
+      register: onboard_list
+    - name: Output excel list
+      debug:
+        var: onboard_list
+      when: output
+
+# Onboarding
+    - name: Register VIM
+      uri:
+        url: http://{{ ob }}:8080/api/v1/excel/selectedvimonboard
+        headers:
+          Authorization: Bearer {{ token['json']['access_token'] }}
+          project-id: "{{ project_id['json'][0]['id'] }}"
+          data: "{{ vim }}"
+      register: vim_registration
+    - name: Output VIM registration
+      debug:
+        var: vim_registration
+      when: output
+      # Tudi ob napaki je odziv 200, v plain text vsebini pa je skrit dejanski rezultat (ok | error)
+
+
+
+
