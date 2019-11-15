@@ -3,4 +3,3 @@ ob: 172.29.100.100
 user: openbaton
 passw: iskratel
 client: nfvo-dashboard1
-output: true

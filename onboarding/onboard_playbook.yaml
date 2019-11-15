@@ -21,12 +21,12 @@
     - name: Output CSP Tools path
       debug:
         var: csp_tools_path['json']
-      when: output
+      tags: [ never, debug ]
 
 # Excel upload
-    - name: Validate excel (usin Curl)
+    - name: Validate excel (using Curl)
       shell: |
-        curl -s -o curl.output -w "%{http_code}" -X POST \
+        curl -s -o curl.raw -w "%{http_code}" -X POST \
         -H "Authorization:Bearer {{ token['json']['access_token'] }}" \
         -H "project-id:{{ project_id['json'][0]['id'] }}" \
         -H "Content-Type:multipart/form-data" \
@@ -38,10 +38,7 @@
       args:
         warn: no
       register: validation_response
-    - name: Fail on error
-      fail:
-        msg: "Excel upload NOT successful!\n\n{{ validation_response }}"
-      when: validation_response['stdout'] != "200"
+      failed_when: validation_response['stdout'] != "200"
     - name: Select for onboard
       uri:
         url: http://{{ ob }}:8080/api/v1/excel/selectForOnboard
@@ -52,23 +49,45 @@
     - name: Output excel list
       debug:
         var: onboard_list
-      when: output
+      tags: [ never, debug ]
+    - name: For test
+      copy:
+        content: "{{ onboard_list }}"
+        dest: onboard_list.raw
+      tags: [ never, raw ]
 
-# Onboarding
-    - name: Register VIM
+# Onboarding VIM
+    - name: List VIMs
       uri:
-        url: http://{{ ob }}:8080/api/v1/excel/selectedvimonboard
+        url: http://{{ ob }}:8080/api/v1/datacenters
         headers:
           Authorization: Bearer {{ token['json']['access_token'] }}
           project-id: "{{ project_id['json'][0]['id'] }}"
-          data: "{{ vim }}"
-      register: vim_registration
-    - name: Output VIM registration
+      register: datacenters
+    - name: VIM already existing
       debug:
-        var: vim_registration
-      when: output
-      # Tudi ob napaki je odziv 200, v plain text vsebini pa je skrit dejanski rezultat (ok | error)
-
+        msg: "Vim named {{ vim }} already exists"
+      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length>0
+    - block:
+        - name: Register VIM
+          uri:
+            url: http://{{ ob }}:8080/api/v1/excel/selectedvimonboard
+            headers:
+              Authorization: Bearer {{ token.json.access_token }}
+              project-id: "{{ project_id['json'][0]['id'] }}"
+              data: "{{ vim }}"
+          register: vim_registration
+          # Tudi ob napaki je odziv 200, v plain text vsebini pa je skrit dejanski rezultat (ok | error)
+        - name: Output VIM registration
+          debug:
+            var: vim_registration
+          tags: [ never, debug ]
+        - name: For offline test
+          copy:
+            content: "{{ vim_registration }}"
+            dest: vim_registration.raw
+          tags: [ never, raw ]
+      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length==0
 
 
 
