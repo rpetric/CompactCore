@@ -77,7 +77,7 @@
               project-id: "{{ project_id['json'][0]['id'] }}"
               data: "{{ vim }}"
           register: vim_registration
-          # Tudi ob napaki je odziv 200, v plain text vsebini pa je skrit dejanski rezultat (ok | error)
+          # todo - Tudi ob napaki je odziv 200, v plain text vsebini pa je skrit dejanski rezultat (ok | error)
         - name: Output VIM registration
           debug:
             var: vim_registration
