@@ -54,11 +54,12 @@
       uri:
         url: http://{{ ob }}:8080/api/v1/ns-descriptors/multipledelete
         method: POST
+        status_code: [204]
         headers:
           Authorization: Bearer {{ token.json.access_token }}
           project-id: "{{ project_id['json'][0]['id'] }}"
         body_format: json
-        body: to_delete
+        body: "{{ to_delete }}"
       register: nsd_delete
     - name: Output delete response
       debug:

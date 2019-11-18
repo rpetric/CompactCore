@@ -11,7 +11,8 @@
               data: "{{ item.split(';==;').pop(2) }}"
           register: nsd_onboard
         # Parse output for errors (status code is always 200)
-        - fail:
+        - name: "Onboarding NSD [{{ item.split(';==;').pop(2) }}] FAILED"
+          fail:
             msg: "NSD onboarding failed: {{ nsd_onboard.json.report[1] }}"
           when: nsd_onboard.json.report[2] != 'ok'
         # Set error (aggregated)
@@ -19,7 +20,6 @@
           set_fact:
             all_onboarding_ok: false
           when: nsd_onboard.json.report[2] != 'ok'
-
         - name: Output NSD onboard
           debug:
             var: nsd_onboard
@@ -30,7 +30,8 @@
       when: not item.split(';==;').pop(5)|bool
 
     # NSD already onboarded
-    - debug:
+    - name: "NSD [{{ item.split(';==;').pop(2) }}] already onboarded!"
+      debug:
         msg: "NSD [{{ item.split(';==;').pop(2) }}] already onboarded!"
       when: item.split(';==;').pop(5)|bool
 
@@ -38,7 +39,8 @@
 
 # Excel validation has failed - error
 - block:
-    - debug:
+    - name: "Onboarding NSD [{{ item.split(';==;').pop(2) }}] FAILED"
+      debug:
         msg: "Not able to onboard NSD [{{ item.split(';==;').pop(2) }}]: {{ item.split(';==;').pop(3) }}"
       failed_when: item.split(';==;').pop(4) != 'ok'
       ignore_errors: true
