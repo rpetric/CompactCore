@@ -6,12 +6,9 @@
   roles:
     - common
     - validate_excel
-  vars:
-    vim: icp
 
   tasks:
-
-    # Check NSDs
+# Get NSDs
     - name: List NSDs
       uri:
         url: http://{{ ob }}:8080/api/v1/ns-descriptors
@@ -29,7 +26,7 @@
         dest: nsds.raw
       tags: [ never, raw ]
 
-    # Prepare list of NSDs to delete
+# Prepare list of NSDs to delete
     - set_fact:
         to_delete: []
 
@@ -49,7 +46,7 @@
       debug:
         var: to_delete
 
-    # Batch delete NSDs (cascade)
+# Batch delete NSDs (cascade)
     - name: "Delete NSDs from the list"
       uri:
         url: http://{{ ob }}:8080/api/v1/ns-descriptors/multipledelete

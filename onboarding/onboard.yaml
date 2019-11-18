@@ -6,11 +6,8 @@
   roles:
     - common
     - validate_excel
-  vars:
-    vim: icp
 
   tasks:
-
 # Onboarding VIM
 
     # Read existing

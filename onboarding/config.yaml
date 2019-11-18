@@ -4,3 +4,4 @@ user: openbaton
 passw: iskratel
 client: nfvo-dashboard1
 excel_file: test.xlsx
+vim: icp
