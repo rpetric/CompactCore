@@ -5,10 +5,65 @@
   gather_facts: no
   roles:
     - common
+    - validate_excel
   vars:
     vim: icp
 
   tasks:
+
+    # Check NSDs
+    - name: List NSDs
+      uri:
+        url: http://{{ ob }}:8080/api/v1/ns-descriptors
+        headers:
+          Authorization: Bearer {{ token['json']['access_token'] }}
+          project-id: "{{ project_id['json'][0]['id'] }}"
+      register: nsds
+    - name: Output existing NSDs
+      debug:
+        var: nsds.json|map(attribute='name')|list
+      tags: [ never, debug ]
+    - name: For test
+      copy:
+        content: "{{ nsds }}"
+        dest: nsds.raw
+      tags: [ never, raw ]
+
+    # Prepare list of NSDs to delete
+    - set_fact:
+        to_delete: []
+
+    # Only those from excel
+    - set_fact:
+        to_delete: "{{ to_delete + nsds.json|selectattr('name', '==', item.split(';==;').pop(2))|map(attribute='id')|list }}"
+      when: item.split(';==;').pop(0)=='wModel items:' and item.split(';==;').pop(4) == 'ok' and item.split(';==;').pop(5)|bool and nsds.json|selectattr('name', '==', item.split(';==;').pop(2))|list|length > 0
+      loop: "{{ onboard_list.json.report }}"
+
+    # All NSDs on Openbaton (call with --tags='all,deleteall')
+    - set_fact:
+        to_delete: nsds.json|map(attribute='id')|list
+      tags: [ never, deleteall ]
+
+    # Resulting list of IDs
+    - name: List of IDs to delete
+      debug:
+        var: to_delete
+
+    # Batch delete NSDs (cascade)
+    - name: "Delete NSDs from the list"
+      uri:
+        url: http://{{ ob }}:8080/api/v1/ns-descriptors/multipledelete
+        method: POST
+        headers:
+          Authorization: Bearer {{ token.json.access_token }}
+          project-id: "{{ project_id['json'][0]['id'] }}"
+        body_format: json
+        body: to_delete
+      register: nsd_delete
+    - name: Output delete response
+      debug:
+        var: nsd_delete
+      tags: [ never, debug ]
 
 # Check VIMs
     - name: List VIMs
@@ -32,10 +87,10 @@
     - name: VIM not existing
       debug:
         msg: "Vim named {{ vim }} does not exist"
-      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length==0
+      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length == 0
 
-# Delete VIM
-    - name: Delete vim if exists
+# Delete VIM if exists
+    - name: Delete vim
       uri:
         url: http://{{ ob }}:8080/api/v1/datacenters/{{ datacenters.json|selectattr('name', 'equalto', vim)|map(attribute='id')|list|first }}
         method: DELETE
@@ -43,7 +98,7 @@
         headers:
           Authorization: Bearer {{ token['json']['access_token'] }}
           project-id: "{{ project_id['json'][0]['id'] }}"
-      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length>0
+      when: datacenters.json|selectattr('name', 'equalto', vim)|list|length > 0
 
 
 

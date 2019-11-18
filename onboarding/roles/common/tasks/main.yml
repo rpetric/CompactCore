@@ -1,4 +1,8 @@
 ---
+- name: Read config file
+  include_vars:
+    file: config.yaml
+  # no_log: true
 - name: Authenticate
   uri:
     url: http://{{ ob }}:8082/auth/realms/iskratel/protocol/openid-connect/token
@@ -18,7 +22,7 @@
   uri:
     url: http://{{ ob }}:8080/api/v1/projects
     headers:
-      Authorization: Bearer {{ token['json']['access_token'] }}
+      Authorization: Bearer {{ token.json.access_token }}
   register: project_id
 - name: Output project id
   debug:

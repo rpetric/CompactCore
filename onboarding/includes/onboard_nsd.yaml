@@ -1,0 +1,48 @@
+# Excel validation OK
+- block:
+    # Onboard NSD
+    - block:
+        - name: "Onboard NSD [{{ item.split(';==;').pop(2) }}]"
+          uri:
+            url: http://{{ ob }}:8080/api/v1/excel/selectWnodeOnboard
+            headers:
+              Authorization: Bearer {{ token.json.access_token }}
+              project-id: "{{ project_id['json'][0]['id'] }}"
+              data: "{{ item.split(';==;').pop(2) }}"
+          register: nsd_onboard
+        # Parse output for errors (status code is always 200)
+        - fail:
+            msg: "NSD onboarding failed: {{ nsd_onboard.json.report[1] }}"
+          when: nsd_onboard.json.report[2] != 'ok'
+        # Set error (aggregated)
+        - name: Register failed operation
+          set_fact:
+            all_onboarding_ok: false
+          when: nsd_onboard.json.report[2] != 'ok'
+
+        - name: Output NSD onboard
+          debug:
+            var: nsd_onboard
+          tags: [ never, debug ]
+      # Despite errors continue looping
+      ignore_errors: true
+      # Onboard, when ready
+      when: not item.split(';==;').pop(5)|bool
+
+    # NSD already onboarded
+    - debug:
+        msg: "NSD [{{ item.split(';==;').pop(2) }}] already onboarded!"
+      when: item.split(';==;').pop(5)|bool
+
+  when: item.split(';==;').pop(4) == 'ok'
+
+# Excel validation has failed - error
+- block:
+    - debug:
+        msg: "Not able to onboard NSD [{{ item.split(';==;').pop(2) }}]: {{ item.split(';==;').pop(3) }}"
+      failed_when: item.split(';==;').pop(4) != 'ok'
+      ignore_errors: true
+    - name: Register failed operation
+      set_fact:
+        all_onboarding_ok: false
+  when: item.split(';==;').pop(4) != 'ok'

@@ -5,58 +5,15 @@
   gather_facts: no
   roles:
     - common
+    - validate_excel
   vars:
     vim: icp
 
   tasks:
 
-# Get CSP tools location
-    - name: Get CSP tools
-      uri:
-        url: http://{{ ob }}:8080/api/v1/excel/csptoolspath
-        headers:
-          Authorization: Bearer {{ token['json']['access_token'] }}
-          project-id: "{{ project_id['json'][0]['id'] }}"
-      register: csp_tools_path
-    - name: Output CSP Tools path
-      debug:
-        var: csp_tools_path['json']
-      tags: [ never, debug ]
-
-# Excel upload
-    - name: Validate excel (using Curl)
-      shell: |
-        curl -s -o curl.raw -w "%{http_code}" -X POST \
-        -H "Authorization:Bearer {{ token['json']['access_token'] }}" \
-        -H "project-id:{{ project_id['json'][0]['id'] }}" \
-        -H "Content-Type:multipart/form-data" \
-        -H "cspToolPath:{{ csp_tools_path['json'] }}" \
-        -H "vim-url:/api/v1/excel/validate" \
-        -H "userName:{{ user }}" \
-        -F "file=@\"test.xlsx\";type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;filename=\"test.xlsx\"" \
-        "http://{{ ob }}:8080/api/v1/excel/validate"
-      args:
-        warn: no
-      register: validation_response
-      failed_when: validation_response['stdout'] != "200"
-    - name: Select for onboard
-      uri:
-        url: http://{{ ob }}:8080/api/v1/excel/selectForOnboard
-        headers:
-          Authorization: Bearer {{ token['json']['access_token'] }}
-          project-id: "{{ project_id['json'][0]['id'] }}"
-      register: onboard_list
-    - name: Output excel list
-      debug:
-        var: onboard_list
-      tags: [ never, debug ]
-    - name: For test
-      copy:
-        content: "{{ onboard_list }}"
-        dest: onboard_list.raw
-      tags: [ never, raw ]
-
 # Onboarding VIM
+
+    # Read existing
     - name: List VIMs
       uri:
         url: http://{{ ob }}:8080/api/v1/datacenters
@@ -64,10 +21,14 @@
           Authorization: Bearer {{ token['json']['access_token'] }}
           project-id: "{{ project_id['json'][0]['id'] }}"
       register: datacenters
+
+    # VIM already existing
     - name: VIM already existing
       debug:
         msg: "Vim named {{ vim }} already exists"
       when: datacenters.json|selectattr('name', 'equalto', vim)|list|length>0
+
+    # VIM not existing, register new
     - block:
         - name: Register VIM
           uri:
@@ -77,7 +38,11 @@
               project-id: "{{ project_id['json'][0]['id'] }}"
               data: "{{ vim }}"
           register: vim_registration
-          # todo - Tudi ob napaki je odziv 200, v plain text vsebini pa je skrit dejanski rezultat (ok | error)
+        # Parse output for errors (status code is always 200)
+        - fail:
+            msg: "VIM registration failed: {{ vim_registration.json.report[1] }}"
+          when: vim_registration.json.report[2] != 'ok'
+
         - name: Output VIM registration
           debug:
             var: vim_registration
@@ -90,4 +55,19 @@
       when: datacenters.json|selectattr('name', 'equalto', vim)|list|length==0
 
 
+# Onboarding NSDs
+    - set_fact:
+        all_onboarding_ok: true
 
+    # Loop over all NSDs
+    - include: includes/onboard_nsd.yaml
+      with_items: "{{ onboard_list.json.report }}"
+      when: item.split(';==;').pop(0)=='wModel items:'
+      loop_control:
+        label: "{{ item }}"
+
+    # Aggregated status (errors during loop are ignored)
+    - name: Success check
+      fail:
+        msg: "Some of the onboardings have failed!"
+      when: not all_onboarding_ok
